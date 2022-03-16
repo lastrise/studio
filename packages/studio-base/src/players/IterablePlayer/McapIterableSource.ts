@@ -4,6 +4,8 @@
 
 import decompressLZ4 from "wasm-lz4";
 
+import { Mcap0IndexedReader, Mcap0StreamReader, Mcap0Types } from "@foxglove/mcap";
+import { loadDecompressHandlers } from "@foxglove/mcap-support";
 import { Bag, Filelike } from "@foxglove/rosbag";
 import { BlobReader } from "@foxglove/rosbag/web";
 import { parse as parseMessageDefinition } from "@foxglove/rosmsg";
@@ -14,7 +16,6 @@ import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 import BrowserHttpReader from "@foxglove/studio-base/util/BrowserHttpReader";
 import CachedFilelike from "@foxglove/studio-base/util/CachedFilelike";
 import { getBagChunksOverlapCount } from "@foxglove/studio-base/util/bags";
-import Bzip2 from "@foxglove/wasm-bz2";
 
 import {
   IIterableSource,
@@ -27,7 +28,8 @@ type BagSource = { type: "file"; file: File } | { type: "remote"; url: string };
 
 export class McapIterableSource implements IIterableSource {
   private _source: BagSource;
-  private _bag: Bag | undefined;
+  private _streamReader?: Mcap0StreamReader;
+  private _indexedReader?: Mcap0IndexedReader;
   private _readersByConnectionId = new Map<number, LazyMessageReader>();
 
   constructor(source: BagSource) {
@@ -35,19 +37,16 @@ export class McapIterableSource implements IIterableSource {
   }
 
   async initialize(): Promise<Initalization> {
-    await decompressLZ4.isLoaded;
-    const bzip2 = await Bzip2.init();
+    const decompressHandlers = await loadDecompressHandlers();
 
-    let fileLike: Filelike | undefined;
+    let fileLike: Filelike;
     if (this._source.type === "remote") {
       const bagUrl = this._source.url;
       const fileReader = new BrowserHttpReader(bagUrl);
       const remoteReader = new CachedFilelike({
         fileReader,
         cacheSizeInBytes: 1024 * 1024 * 200, // 200MiB
-        keepReconnectingCallback: (_reconnecting) => {
-          // no-op?
-        },
+        keepReconnectingCallback: (_reconnecting) => {},
       });
 
       // Call open on the remote reader to see if we can access the remote file
@@ -58,6 +57,15 @@ export class McapIterableSource implements IIterableSource {
       fileLike = new BlobReader(this._source.file);
     }
 
+    try {
+      const readable: Mcap0Types.IReadable = {
+        size: async () => BigInt(fileLike.size()),
+        read: async (offset, length) => await fileLike.read(Number(offset), Number(length)),
+      };
+      this._indexedReader = await Mcap0IndexedReader.Initialize({ readable, decompressHandlers });
+    } catch (err) {
+      this._streamReader = new Mcap0StreamReader({ decompressHandlers });
+    }
     this._bag = new Bag(fileLike, {
       parse: false,
       decompress: {
