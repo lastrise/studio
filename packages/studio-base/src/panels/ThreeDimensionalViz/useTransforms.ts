@@ -30,7 +30,6 @@ import {
 import { MessageEvent, Topic } from "@foxglove/studio-base/players/types";
 import { FoxgloveMessages } from "@foxglove/studio-base/types/FoxgloveMessages";
 import { MarkerArray, StampedMessage, TF } from "@foxglove/studio-base/types/Messages";
-import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
 import { TransformLink } from "./types";
 import { Frame } from "./useFrame";
