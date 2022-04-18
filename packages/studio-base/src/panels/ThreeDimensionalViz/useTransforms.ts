@@ -12,6 +12,7 @@
 //   You may not use this file except in compliance with the License.
 
 import { useMemo, useRef } from "react";
+import { DeepPartial } from "ts-essentials";
 
 import {
   TF_DATATYPES,
@@ -119,19 +120,22 @@ function useTransforms(args: Args): IImmutableTransformTree {
       }
 
       for (const msg of msgs) {
-        if ("header" in (msg.message as Partial<StampedMessage>)) {
-          const frameId = (msg.message as Partial<StampedMessage>).header?.frame_id;
+        const maybeStampedMessage = msg.message as undefined | Partial<StampedMessage>;
+        if (maybeStampedMessage && "header" in maybeStampedMessage) {
+          const frameId = maybeStampedMessage.header?.frame_id;
           if (frameId != undefined) {
             transforms.getOrCreateFrame(frameId);
             updated = true;
             continue;
           }
         }
+
         // A hack specific to MarkerArray messages, which don't themselves have headers, but individual markers do.
-        if ("markers" in (msg.message as Partial<MarkerArray>)) {
-          const markers = (msg.message as MarkerArray).markers;
-          for (const marker of markers) {
-            const frameId = mightActuallyBePartial(marker).header?.frame_id;
+        const maybeMarkerArrayMessage = msg.message as undefined | DeepPartial<MarkerArray>;
+        if (maybeMarkerArrayMessage && "markers" in maybeMarkerArrayMessage) {
+          const markers = maybeMarkerArrayMessage.markers;
+          for (const marker of markers ?? []) {
+            const frameId = marker?.header?.frame_id;
             if (frameId != undefined) {
               transforms.getOrCreateFrame(frameId);
               updated = true;

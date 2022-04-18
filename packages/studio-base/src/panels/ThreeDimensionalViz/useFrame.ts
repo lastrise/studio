@@ -61,8 +61,8 @@ const useFrame = (topics: string[]): FrameState => {
           // ThreeDimensionalViz panel fully parses all of the messages it
           // consumes, and sometimes repeatedly so via lastSeenMessages. All
           // incoming lazy messages are converted into fully parsed messages here
-          const maybeLazy = messageEvent as { message: { toJSON?: () => unknown } };
-          if ("toJSON" in maybeLazy.message) {
+          const maybeLazy = messageEvent as { message: undefined | { toJSON?: () => unknown } };
+          if (maybeLazy.message && "toJSON" in maybeLazy.message) {
             (maybeLazy.message as unknown) = maybeLazy.message.toJSON!();
           }
 
