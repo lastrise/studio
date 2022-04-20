@@ -12,7 +12,7 @@ import {
   geoJSON,
   Layer,
 } from "leaflet";
-import { difference, minBy, partition, transform, xor } from "lodash";
+import { difference, minBy, partition, transform, union } from "lodash";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useResizeDetector } from "react-resize-detector";
 import { useDebouncedCallback } from "use-debounce";
@@ -182,17 +182,26 @@ function MapPanel(props: MapPanelProps): JSX.Element {
   }, [topics]);
 
   const settingsActionHandler = useCallback((action: SettingsTreeAction) => {
-    if (action.payload.path[0] === "topics") {
-      const topic = action.payload.path[1];
+    const { path, input, value } = action.payload;
+
+    if (path[0] === "topics" && input === "boolean") {
+      const topic = path[1];
       if (topic) {
         setConfig((oldConfig) => {
-          return { ...oldConfig, disabledTopics: xor(oldConfig.disabledTopics, [topic]) };
+          return {
+            ...oldConfig,
+            disabledTopics:
+              value === true
+                ? difference(oldConfig.disabledTopics, [topic])
+                : union(oldConfig.disabledTopics, [topic]),
+          };
         });
       }
     }
-    if (action.payload.path[0] === "layer") {
+
+    if (path[0] === "layer" && input === "select") {
       setConfig((oldConfig) => {
-        return { ...oldConfig, layer: String(action.payload.value ?? "map") };
+        return { ...oldConfig, layer: value ?? "map" };
       });
     }
   }, []);
