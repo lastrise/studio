@@ -43,7 +43,6 @@ import {
   OCCUPANCY_GRID_DATATYPES,
 } from "./ros";
 
-const SHOW_STATS = true;
 const SHOW_DEBUG = false;
 
 const SUPPORTED_DATATYPES = new Set<string>();
@@ -56,6 +55,7 @@ mergeSetInto(SUPPORTED_DATATYPES, POINTCLOUD_DATATYPES);
 
 type Config = {
   cameraState: CameraState;
+  enableStats: boolean;
   followTf?: string;
 };
 
@@ -75,6 +75,9 @@ const labelDark = css`
 
 function buildSettingsTree(config: Config): SettingsTreeNode {
   return {
+    fields: {
+      enableStats: { label: "Enable Stats", input: "boolean", value: config.enableStats },
+    },
     children: {
       cameraState: {
         label: "Camera",
@@ -127,7 +130,10 @@ function buildSettingsTree(config: Config): SettingsTreeNode {
   };
 }
 
-function RendererOverlay(props: { colorScheme: "dark" | "light" | undefined }): JSX.Element {
+function RendererOverlay(props: {
+  colorScheme: "dark" | "light" | undefined;
+  enableStats: boolean;
+}): JSX.Element {
   const colorScheme = props.colorScheme;
   const [_selectedRenderable, setSelectedRenderable] = useState<THREE.Object3D | undefined>(
     undefined,
@@ -202,7 +208,7 @@ function RendererOverlay(props: { colorScheme: "dark" | "light" | undefined }): 
   );
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  const stats = SHOW_STATS ? (
+  const stats = props.enableStats ? (
     <div id="stats" style={{ position: "absolute", top: 0 }}>
       <Stats />
     </div>
@@ -237,6 +243,7 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
 
     return {
       cameraState,
+      enableStats: partialConfig?.enableStats ?? true,
       followTf: partialConfig?.followTf,
     };
   });
@@ -475,7 +482,7 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
         <canvas ref={setCanvas} style={{ position: "absolute", top: 0, left: 0 }} />
       </CameraListener>
       <RendererContext.Provider value={renderer}>
-        <RendererOverlay colorScheme={colorScheme} />
+        <RendererOverlay colorScheme={colorScheme} enableStats={config.enableStats} />
       </RendererContext.Provider>
     </div>
   );
