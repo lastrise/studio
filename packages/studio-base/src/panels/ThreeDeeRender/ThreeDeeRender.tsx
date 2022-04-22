@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import css from "@emotion/css";
-import { cloneDeep, merge } from "lodash";
+import { cloneDeep, merge, set } from "lodash";
 import React, { useCallback, useRef, useLayoutEffect, useEffect, useState, useMemo } from "react";
 import { useResizeDetector } from "react-resize-detector";
+import { useThrottle } from "react-use";
 import { DeepPartial } from "ts-essentials";
 
 import Logger from "@foxglove/log";
@@ -17,6 +18,7 @@ import {
 } from "@foxglove/regl-worldview";
 import { toNanoSec } from "@foxglove/rostime";
 import { PanelExtensionContext, RenderState, Topic, MessageEvent } from "@foxglove/studio";
+import { SettingsTreeAction } from "@foxglove/studio-base/components/SettingsTreeEditor/types";
 import useCleanup from "@foxglove/studio-base/hooks/useCleanup";
 import { normalizeMarker } from "@foxglove/studio-base/panels/ThreeDeeRender/normalizeMessages";
 
@@ -37,6 +39,7 @@ import {
   OccupancyGrid,
   OCCUPANCY_GRID_DATATYPES,
 } from "./ros";
+import { buildSettingsTree, ThreeDeeRenderConfig } from "./settings";
 
 const SHOW_STATS = true;
 const SHOW_DEBUG = false;
@@ -48,11 +51,6 @@ mergeSetInto(SUPPORTED_DATATYPES, MARKER_DATATYPES);
 mergeSetInto(SUPPORTED_DATATYPES, MARKER_ARRAY_DATATYPES);
 mergeSetInto(SUPPORTED_DATATYPES, OCCUPANCY_GRID_DATATYPES);
 mergeSetInto(SUPPORTED_DATATYPES, POINTCLOUD_DATATYPES);
-
-type Config = {
-  cameraState: CameraState;
-  followTf?: string;
-};
 
 const log = Logger.getLogger(__filename);
 
@@ -169,8 +167,8 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
   const { initialState, saveState } = context;
 
   // Load and save the persisted panel configuration
-  const [config, setConfig] = useState<Config>(() => {
-    const partialConfig = initialState as DeepPartial<Config> | undefined;
+  const [config, setConfig] = useState<ThreeDeeRenderConfig>(() => {
+    const partialConfig = initialState as DeepPartial<ThreeDeeRenderConfig> | undefined;
     const cameraState: CameraState = merge(
       cloneDeep(DEFAULT_CAMERA_STATE),
       partialConfig?.cameraState,
@@ -194,11 +192,23 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
 
   const [renderDone, setRenderDone] = useState<(() => void) | undefined>();
 
+  const rendererRef = useRef(renderer);
+  useEffect(() => {
+    rendererRef.current = renderer;
+  }, [renderer]);
+
   // Config cameraState
-  const setCameraState = useCallback((state: CameraState) => {
-    setConfig((prevConfig) => ({ ...prevConfig, cameraState: state }));
-  }, []);
-  const [cameraStore] = useState(() => new CameraStore(setCameraState, cameraState));
+  // const setCameraState = useCallback(, []);
+  const [cameraStore] = useState(
+    () =>
+      new CameraStore((state: CameraState) => {
+        if (rendererRef.current) {
+          rendererRef.current.setCameraState(state);
+          rendererRef.current.animationFrame();
+        }
+        setConfig((prevConfig) => ({ ...prevConfig, cameraState: state }));
+      }, cameraState),
+  );
 
   // Config followTf
   useEffect(() => {
@@ -207,10 +217,43 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
     }
   }, [followTf, renderer]);
 
-  // Save panel settings whenever they change
-  useEffect(() => {
+  // Called whenever the user modifies a field in the panel settings sidebar
+  const settingsActionHandler = useCallback(
+    (action: SettingsTreeAction) => {
+      setConfig((previous) => {
+        const newConfig = { ...previous };
+        set(newConfig, action.payload.path, action.payload.value);
+
+        if (action.payload.path[0] === "cameraState") {
+          renderer?.setCameraState(newConfig.cameraState);
+          renderer?.animationFrame();
+        }
+
+        return newConfig;
+      });
+    },
+    [renderer],
+  );
+
+  // Create a method to update the panel settings sidebar and persist the latest
+  // panel settings
+  const updateSettings = useCallback(() => {
+    const tree = buildSettingsTree(config, topics ?? []);
+    // eslint-disable-next-line no-underscore-dangle, @typescript-eslint/no-explicit-any
+    (context as unknown as any).__updatePanelSettingsTree({
+      actionHandler: settingsActionHandler,
+      settings: tree,
+    });
     saveState(config);
-  }, [config, saveState]);
+  }, [config, context, saveState, settingsActionHandler, topics]);
+  // Create a throttled version of updateSettings
+  const throttledUpdateSettingsTree = useThrottle(() => updateSettings, 500);
+  // Call the throttled variant of updateSettings whenever any of the
+  // dependencies of updateSettings changes
+  useEffect(() => {
+    void updateSettings;
+    throttledUpdateSettingsTree();
+  }, [updateSettings, throttledUpdateSettingsTree]);
 
   useCleanup(() => {
     renderer?.dispose();
@@ -319,13 +362,11 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
     }
   }, [colorScheme, renderer]);
 
-  // Handle messages and render a frame if the camera has moved or new messages
-  // are available
+  // Handle messages and render a frame if new messages are available
   useEffect(() => {
     if (!renderer) {
       return;
     }
-    renderer.setCameraState(cameraState);
 
     if (!messages) {
       renderer.animationFrame();
@@ -370,7 +411,7 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
     }
 
     renderer.animationFrame();
-  }, [cameraState, messages, renderer, topicsToDatatypes]);
+  }, [messages, renderer, topicsToDatatypes]);
 
   // Invoke the done callback once the render is complete
   useEffect(() => {
