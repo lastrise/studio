@@ -3,7 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import css from "@emotion/css";
-import { cloneDeep, merge } from "lodash";
+import produce from "immer";
+import { cloneDeep, merge, set } from "lodash";
 import React, { useCallback, useRef, useLayoutEffect, useEffect, useState, useMemo } from "react";
 import { useResizeDetector } from "react-resize-detector";
 import { DeepPartial } from "ts-essentials";
@@ -17,6 +18,10 @@ import {
 } from "@foxglove/regl-worldview";
 import { toNanoSec } from "@foxglove/rostime";
 import { PanelExtensionContext, RenderState, Topic, MessageEvent } from "@foxglove/studio";
+import {
+  SettingsTreeAction,
+  SettingsTreeNode,
+} from "@foxglove/studio-base/components/SettingsTreeEditor/types";
 import useCleanup from "@foxglove/studio-base/hooks/useCleanup";
 import { normalizeMarker } from "@foxglove/studio-base/panels/ThreeDeeRender/normalizeMessages";
 
@@ -67,6 +72,60 @@ const labelDark = css`
   color: #e1e1e4;
   background-color: #181818cc;
 `;
+
+function buildSettingsTree(config: Config): SettingsTreeNode {
+  return {
+    children: {
+      cameraState: {
+        label: "Camera",
+        fields: {
+          distance: { label: "Distance", input: "number", value: config.cameraState.distance },
+          perspective: {
+            label: "Perspective",
+            input: "boolean",
+            value: config.cameraState.perspective,
+          },
+          phi: { label: "Phi", input: "number", value: config.cameraState.phi },
+          thetaOffset: {
+            label: "Theta Offset",
+            input: "number",
+            value: config.cameraState.thetaOffset,
+          },
+          fovy: { label: "Fovy", input: "number", value: config.cameraState.fovy },
+          near: { label: "Near", input: "number", value: config.cameraState.near },
+          far: { label: "Far", input: "number", value: config.cameraState.far },
+        },
+        children: {
+          target: {
+            label: "Target",
+            fields: {
+              0: { label: "X", input: "number", value: config.cameraState.target[0] },
+              1: { label: "Y", input: "number", value: config.cameraState.target[1] },
+              2: { label: "Z", input: "number", value: config.cameraState.target[2] },
+            },
+          },
+          targetOffset: {
+            label: "Target Offset",
+            fields: {
+              0: { label: "X", input: "number", value: config.cameraState.targetOffset[0] },
+              1: { label: "Y", input: "number", value: config.cameraState.targetOffset[1] },
+              2: { label: "Z", input: "number", value: config.cameraState.targetOffset[2] },
+            },
+          },
+          targetOrientation: {
+            label: "Target Orientation",
+            fields: {
+              0: { label: "X", input: "number", value: config.cameraState.targetOrientation[0] },
+              1: { label: "Y", input: "number", value: config.cameraState.targetOrientation[1] },
+              2: { label: "Z", input: "number", value: config.cameraState.targetOrientation[2] },
+              3: { label: "W", input: "number", value: config.cameraState.targetOrientation[3] },
+            },
+          },
+        },
+      },
+    },
+  };
+}
 
 function RendererOverlay(props: { colorScheme: "dark" | "light" | undefined }): JSX.Element {
   const colorScheme = props.colorScheme;
@@ -199,6 +258,23 @@ export function ThreeDeeRender({ context }: { context: PanelExtensionContext }):
     setConfig((prevConfig) => ({ ...prevConfig, cameraState: state }));
   }, []);
   const [cameraStore] = useState(() => new CameraStore(setCameraState, cameraState));
+
+  const actionHandler = useCallback((action: SettingsTreeAction) => {
+    setConfig((oldConfig) =>
+      produce(oldConfig, (draft) => {
+        set(draft, action.payload.path, action.payload.value);
+      }),
+    );
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line no-underscore-dangle, @typescript-eslint/no-explicit-any
+    (context as unknown as any).__updatePanelSettingsTree({
+      actionHandler,
+      disableFilter: true,
+      settings: buildSettingsTree(config),
+    });
+  }, [actionHandler, config, context]);
 
   // Config followTf
   useEffect(() => {
