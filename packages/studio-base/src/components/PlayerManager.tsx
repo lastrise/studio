@@ -127,7 +127,8 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
         type: "connection",
         sourceId: "rosbridge-websocket",
         title: websocket,
-        label: "Duckietown Dashboard Rosbridge"
+        label: "Rosbridge (ROS 1 & 2)",
+        extra: {url: websocket}
       });
   }, [websocket]);
 
