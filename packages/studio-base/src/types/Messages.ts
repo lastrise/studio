@@ -509,23 +509,23 @@ export type CoordinationSignal = {
    signal: string;
 
   //these must match with LED_protocol.yaml
-  OFF: light_off;
+  //OFF: light_off;
   //ON: light_on;
-  ON: traffic_light_go;
-  SIGNAL_A: CAR_SIGNAL_A;
-  SIGNAL_B: CAR_SIGNAL_B;
-  SIGNAL_C: CAR_SIGNAL_C;
-  SIGNAL_GREEN: CAR_SIGNAL_GREEN;
-  SIGNAL_PRIORITY: CAR_SIGNAL_PRIORITY;
-  SIGNAL_SACRIFICE_FOR_PRIORITY: CAR_SIGNAL_SACRIFICE_FOR_PRIORITY;
+  //ON: traffic_light_go;
+  //SIGNAL_A: CAR_SIGNAL_A;
+  //SIGNAL_B: CAR_SIGNAL_B;
+  //SIGNAL_C: CAR_SIGNAL_C;
+  //SIGNAL_GREEN: CAR_SIGNAL_GREEN;
+  //SIGNAL_PRIORITY: CAR_SIGNAL_PRIORITY;
+  //SIGNAL_SACRIFICE_FOR_PRIORITY: CAR_SIGNAL_SACRIFICE_FOR_PRIORITY;
   
-  TL_GO_ALL: tl_go_all;
-  TL_STOP_ALL: tl_stop_all;
-  TL_GO_N: tl_go_N;
-  TL_GO_S: tl_go_S;
-  TL_GO_W: tl_go_W;
-  TL_GO_E: tl_go_E;
-  TL_YIELD: tl_yield;
+  //TL_GO_ALL: tl_go_all;
+  //TL_STOP_ALL: tl_stop_all;
+  //TL_GO_N: tl_go_N;
+  //TL_GO_S: tl_go_S;
+  //TL_GO_W: tl_go_W;
+  //TL_GO_E: tl_go_E;
+  //TL_YIELD: tl_yield;
 };
 
 export type DiagnosticsCodeProfiling = {
@@ -686,7 +686,7 @@ export type DiagnosticsRosTopicArray = {
   data: Image;
   
   // location on the display where to show the fragment
-  location: RegionOfInterest;
+  //location: RegionOfInterest;
   
   // Z index in the Z-buffer of the segment
   z: number;
@@ -728,7 +728,7 @@ export type DiagnosticsRosTopicArray = {
 
  export type DuckiebotLED = {
   header: Header;
-  colors: sColorRGBA[];
+  //colors: sColorRGBA[];
  };
 
  export type EncoderStamped = {
@@ -815,8 +815,8 @@ export type DiagnosticsRosTopicArray = {
  };
 
  export type LEDDetection = {
-  timestamp1: time;		// initial timestamp of the camera stream used 
-  timestamp2: time;		// final timestamp of the camera stream used 
+  //timestamp1: time;		// initial timestamp of the camera stream used 
+  //timestamp2: time;		// final timestamp of the camera stream used 
   pixels_normalized: Vector2D;
   frequency: number; 
   color: string;        // will be r, g or b 
@@ -855,7 +855,7 @@ export type DiagnosticsRosTopicArray = {
  export type LEDPattern = {
   header: Header;
   color_list: string[];
-  rgb_vals: ColorRGBA[];
+  //rgb_vals: ColorRGBA[];
   color_mask: number[];
   frequency: number;
   frequency_mask: number[];
@@ -1168,10 +1168,10 @@ export type DiagnosticsRosTopicArray = {
 
   export type Trajectory = {
     header: Header;
-    pos: Vector3Stamped[];
-    vel: Vector3Stamped[];
-    acc: Vector3Stamped[];
-    jerk: Vector3Stamped[];
+    //pos: Vector3Stamped[];
+    //vel: Vector3Stamped[];
+    //acc: Vector3Stamped[];
+    //jerk: Vector3Stamped[];
   };
 
   export type TurnIDandType = {
@@ -1192,18 +1192,18 @@ export type DiagnosticsRosTopicArray = {
 
   export type VehicleCorners = {
     header: Header;
-    corners: Point32[];
-    detection: Bool;
+    //corners: Point32[];
+    //detection: Bool;
     H: number;
     W: number;
   };
 
   export type VehiclePose = {
     header: Header;
-    rho: Float32;
-    theta: Float32;
-    psi: Float32;
-    detection: Bool;
+    //rho: Float32;
+    //theta: Float32;
+    //psi: Float32;
+    //detection: Bool;
   };
 
   export type Vsample = {
