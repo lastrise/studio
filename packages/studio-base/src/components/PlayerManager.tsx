@@ -113,6 +113,25 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
   const globalVariablesRef = useLatest(globalVariables);
   const messageOrderRef = useLatest(messageOrder);
 
+  // URL-query websocket connection to Rosbridge
+  const params = new URLSearchParams(location.search);
+  const websocket = params.get("websocket") || "";
+  React.useEffect(() => {
+      if (!websocket) {
+        return;
+      }
+
+      const entityPlayer = new RosbridgePlayer({url: websocket, metricsCollector: metricsCollector});
+      setBasePlayer(entityPlayer);
+      addRecent({
+        type: "connection",
+        sourceId: "rosbridge-websocket",
+        title: websocket,
+        label: "Rosbridge (ROS 1 & 2)",
+        extra: {url: websocket}
+      });
+  }, [websocket]);
+
   const player = useMemo<OrderedStampPlayer | undefined>(() => {
     if (!basePlayer) {
       return undefined;
@@ -136,6 +155,11 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
   const selectSource = useCallback(
     async (sourceId: string, args?: DataSourceArgs) => {
       log.debug(`Select Source: ${sourceId}`);
+
+      if (location.search) {
+        const url = window.location.origin + window.location.pathname
+        window.history.pushState({path: url},'', url);
+      }
 
       // empty string sourceId
       if (!sourceId) {
