@@ -49,6 +49,7 @@ import OrderedStampPlayer from "@foxglove/studio-base/players/OrderedStampPlayer
 import UserNodePlayer from "@foxglove/studio-base/players/UserNodePlayer";
 import { Player } from "@foxglove/studio-base/players/types";
 import { UserNodes } from "@foxglove/studio-base/types/panels";
+import RosbridgePlayer from "@foxglove/studio-base/players/RosbridgePlayer";
 
 const log = Logger.getLogger(__filename);
 
